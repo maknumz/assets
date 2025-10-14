@@ -50,6 +50,7 @@ There are several scripts available for maintainers:
 - `make add-token asset_id=c60_t0x4Fabb145d64652a948d72533023f6E7A623C7C53` -- Create `info.json` file as asset template.
 - `make add-tokenlist asset_id=c60_t0x4Fabb145d64652a948d72533023f6E7A623C7C53` -- Adds a token to tokenlist.json.
 - `make add-tokenlist-extended asset_id=c60_t0x4Fabb145d64652a948d72533023f6E7A623C7C53` -- Adds a token to tokenlist-extended.json.
+- `assets photobooth --template <ชื่อ-template> --output photobooth.jpg <ไฟล์รูป...>` -- สร้างภาพ Photo Booth ขนาด 4x6 นิ้ว โดยรองรับคอลลาจ 1-9 รูป พร้อม template ให้เลือกหลายแบบ (ใช้ `--list` เพื่อดูรายการ template)
 
 ## On Checks
 
