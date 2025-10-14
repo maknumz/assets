@@ -1,11 +1,13 @@
 package manager
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/trustwallet/assets-go-libs/file"
 	"github.com/trustwallet/assets-go-libs/path"
 	"github.com/trustwallet/assets/internal/config"
+	"github.com/trustwallet/assets/internal/photobooth"
 	"github.com/trustwallet/assets/internal/processor"
 	"github.com/trustwallet/assets/internal/report"
 	"github.com/trustwallet/assets/internal/service"
@@ -29,6 +31,8 @@ func InitCommands() {
 	rootCmd.AddCommand(addTokenCmd)
 	rootCmd.AddCommand(addTokenlistCmd)
 	rootCmd.AddCommand(addTokenlistExtendedCmd)
+	initPhotoboothCommand()
+	rootCmd.AddCommand(photoboothCmd)
 }
 
 var (
@@ -93,7 +97,73 @@ var (
 			handleAddTokenList(args, path.TokenlistExtended)
 		},
 	}
+	photoboothCmd = &cobra.Command{
+		Use:   "photobooth [รูปภาพ...]",
+		Short: "สร้างภาพ Photo Booth ขนาด 4x6 นิ้ว",
+		Args:  cobra.ArbitraryArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if photoboothList {
+				return listPhotoboothTemplates()
+			}
+
+			if photoboothTemplate == "" {
+				return fmt.Errorf("กรุณาระบุชื่อ template ด้วย --template")
+			}
+
+			if err := photobooth.ValidateTemplateName(photoboothTemplate); err != nil {
+				return err
+			}
+
+			if len(args) == 0 {
+				min, max := photobooth.SlotCountRange()
+				return fmt.Errorf("กรุณาระบุไฟล์รูปภาพ (%d-%d รูปตาม template)", min, max)
+			}
+
+			output := photoboothOutput
+			if output == "" {
+				output = "photobooth.jpg"
+			}
+
+			if err := photobooth.Generate(photoboothTemplate, args, output); err != nil {
+				return err
+			}
+
+			fmt.Fprintf(cmd.OutOrStdout(), "บันทึกไฟล์เรียบร้อย: %s\n", output)
+			return nil
+		},
+	}
 )
+
+var (
+	photoboothTemplate string
+	photoboothOutput   string
+	photoboothList     bool
+	photoboothCount    int
+)
+
+func initPhotoboothCommand() {
+	photoboothCmd.Flags().BoolVar(&photoboothList, "list", false, "แสดง template ที่มีให้เลือก")
+	photoboothCmd.Flags().StringVar(&photoboothTemplate, "template", "", "ระบุชื่อ template ที่ต้องการใช้")
+	photoboothCmd.Flags().StringVar(&photoboothOutput, "output", "photobooth.jpg", "ไฟล์เอาต์พุตสำหรับบันทึกภาพ")
+	photoboothCmd.Flags().IntVar(&photoboothCount, "count", 0, "กรอง template ตามจำนวนรูป")
+}
+
+func listPhotoboothTemplates() error {
+	summaries := photobooth.Summaries()
+
+	if photoboothCount > 0 {
+		if err := photobooth.ValidateSlotCount(photoboothCount); err != nil {
+			return err
+		}
+		summaries = photobooth.FilterTemplatesBySlots(photoboothCount)
+	}
+
+	for _, summary := range summaries {
+		fmt.Printf("%-18s (%d รูป) - %s\n", summary.Name, summary.Slots, summary.Description)
+	}
+
+	return nil
+}
 
 func handleAddTokenList(args []string, tokenlistType path.TokenListType) {
 	if len(args) != 1 {
